@@ -23,7 +23,7 @@ timezone: Asia/Shanghai
 
 title: wanchunw                          # the main title
 
-tagline: hello world!   # it will display as the sub-title
+tagline: 对酒当歌，人生几何   # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
   wanchun's blog
