@@ -1,0 +1,259 @@
+<!DOCTYPE html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f7f7"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1b1e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="viewport" content="width=device-width, user-scalable=no initial-scale=1, shrink-to-fit=no, viewport-fit=cover" ><meta name="generator" content="Jekyll v4.4.1" /><meta property="og:title" content="JDK源码学习之HashMap" /><meta property="og:locale" content="en" /><meta name="description" content="1. 概述 HashMap是Java开发中最常用的数据结构，阅读源码有助于我们了解其工作原理及实现。关于HashMap的特性，可以参考官方文档：" /><meta property="og:description" content="1. 概述 HashMap是Java开发中最常用的数据结构，阅读源码有助于我们了解其工作原理及实现。关于HashMap的特性，可以参考官方文档：" /><link rel="canonical" href="https://wanchunw.com/posts/jdk-hashmap/" /><meta property="og:url" content="https://wanchunw.com/posts/jdk-hashmap/" /><meta property="og:site_name" content="wanchunw" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2016-11-06T04:45:01+08:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="JDK源码学习之HashMap" /><meta name="twitter:site" content="@wengwch" /><meta name="google-site-verification" content="3SRvR6RQXINPNiN8k46kh8YAeoADB9YaeEpz5H60VxM" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2016-11-06T04:45:01+08:00","datePublished":"2016-11-06T04:45:01+08:00","description":"1. 概述 HashMap是Java开发中最常用的数据结构，阅读源码有助于我们了解其工作原理及实现。关于HashMap的特性，可以参考官方文档：","headline":"JDK源码学习之HashMap","mainEntityOfPage":{"@type":"WebPage","@id":"https://wanchunw.com/posts/jdk-hashmap/"},"url":"https://wanchunw.com/posts/jdk-hashmap/"}</script><title>JDK源码学习之HashMap | wanchunw</title><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="wanchunw"><meta name="application-name" content="wanchunw"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.googleapis.com" ><link rel="dns-prefetch" href="https://fonts.googleapis.com" ><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com" ><link rel="dns-prefetch" href="https://fonts.googleapis.com" ><link rel="preconnect" href="https://cdn.jsdelivr.net" ><link rel="dns-prefetch" href="https://cdn.jsdelivr.net" ><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato&family=Source+Sans+Pro:wght@400;600;700;900&display=swap"><link rel="preconnect" href="https://www.google-analytics.com" crossorigin="use-credentials"><link rel="dns-prefetch" href="https://www.google-analytics.com"><link rel="preconnect" href="https://www.googletagmanager.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://www.googletagmanager.com"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css"><link rel="stylesheet" href="/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tocbot@4.20.1/dist/tocbot.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/magnific-popup@1/dist/magnific-popup.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script> <script type="text/javascript"> class ModeToggle { static get MODE_KEY() { return "mode"; } static get MODE_ATTR() { return "data-mode"; } static get DARK_MODE() { return "dark"; } static get LIGHT_MODE() { return "light"; } static get ID() { return "mode-toggle"; } constructor() { if (this.hasMode) { if (this.isDarkMode) { if (!this.isSysDarkPrefer) { this.setDark(); } } else { if (this.isSysDarkPrefer) { this.setLight(); } } } let self = this; /* always follow the system prefers */ this.sysDarkPrefers.addEventListener('change', () => { if (self.hasMode) { if (self.isDarkMode) { if (!self.isSysDarkPrefer) { self.setDark(); } } else { if (self.isSysDarkPrefer) { self.setLight(); } } self.clearMode(); } self.notify(); }); } /* constructor() */ get sysDarkPrefers() { return window.matchMedia("(prefers-color-scheme: dark)"); } get isSysDarkPrefer() { return this.sysDarkPrefers.matches; } get isDarkMode() { return this.mode === ModeToggle.DARK_MODE; } get isLightMode() { return this.mode === ModeToggle.LIGHT_MODE; } get hasMode() { return this.mode != null; } get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); } /* get the current mode on screen */ get modeStatus() { if (this.isDarkMode || (!this.hasMode && this.isSysDarkPrefer)) { return ModeToggle.DARK_MODE; } else { return ModeToggle.LIGHT_MODE; } } setDark() { $('html').attr(ModeToggle.MODE_ATTR, ModeToggle.DARK_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); } setLight() { $('html').attr(ModeToggle.MODE_ATTR, ModeToggle.LIGHT_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); } clearMode() { $('html').removeAttr(ModeToggle.MODE_ATTR); sessionStorage.removeItem(ModeToggle.MODE_KEY); } /* Notify another plugins that the theme mode has changed */ notify() { window.postMessage({ direction: ModeToggle.ID, message: this.modeStatus }, "*"); } flipMode() { if (this.hasMode) { if (this.isSysDarkPrefer) { if (this.isLightMode) { this.clearMode(); } else { this.setLight(); } } else { if (this.isDarkMode) { this.clearMode(); } else { this.setDark(); } } } else { if (this.isSysDarkPrefer) { this.setLight(); } else { this.setDark(); } } this.notify(); } /* flipMode() */ } /* ModeToggle */ const modeToggle = new ModeToggle(); </script><body data-topbar-visible="true"><div id="sidebar" class="d-flex flex-column align-items-end"><div class="profile-wrapper text-center"><div id="avatar"> <a href="/" class="mx-auto"> <img src="https://avatars.githubusercontent.com/u/3319439?s=460&v=4" alt="avatar" onerror="this.style.display='none'"> </a></div><div class="site-title"> <a href="/">wanchunw</a></div><div class="site-subtitle font-italic">对酒当歌，人生几何</div></div><ul class="w-100"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <button class="mode-toggle btn" aria-label="Switch Mode"> <i class="fas fa-adjust"></i> </button> <span class="icon-border"></span> <a href="https://github.com/wengwch" aria-label="github" target="_blank" rel="noopener noreferrer"> <i class="fab fa-github"></i> </a> <a href="https://twitter.com/wengwch" aria-label="twitter" target="_blank" rel="noopener noreferrer"> <i class="fab fa-twitter"></i> </a> <a href="javascript:location.href = 'mailto:' + ['hi','wanchunw.com'].join('@')" aria-label="email" > <i class="fas fa-envelope"></i> </a> <a href="/feed.xml" aria-label="rss" > <i class="fas fa-rss"></i> </a></div></div><div id="topbar-wrapper"><div id="topbar" class="container d-flex align-items-center justify-content-between h-100 pl-3 pr-3 pl-md-4 pr-md-4"> <span id="breadcrumb"> <span> <a href="/"> Home </a> </span> <span>JDK源码学习之HashMap</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Post</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper" class="d-flex justify-content-center"><div id="main" class="container pl-xl-4 pr-xl-4"><div class="row"><div id="core-wrapper" class="col-12 col-lg-11 col-xl-9 pr-xl-4"><div class="post pl-1 pr-1 pl-md-2 pr-md-2"><h1 data-toc-skip>JDK源码学习之HashMap</h1><div class="post-meta text-muted"> <span> Posted <em class="" data-ts="1478378701" data-df="ll" data-toggle="tooltip" data-placement="bottom"> Nov 6, 2016 </em> </span><div class="d-flex justify-content-between"> <span> By <em> <a href="https://twitter.com/wengwch">wanchun</a> </em> </span><div> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="1867 words"> <em>10 min</em> read</span></div></div></div><div class="post-content"><h3 id="1-概述"><span class="mr-2">1. 概述</span><a href="#1-概述" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>HashMap是Java开发中最常用的数据结构，阅读源码有助于我们了解其工作原理及实现。关于HashMap的特性，可以参考官方文档：</p><blockquote><p>Hash table based implementation of the Map interface. This implementation provides all of the optional map operations, and permits null values and the null key. (The HashMap class is roughly equivalent to Hashtable, except that it is unsynchronized and permits nulls.) This class makes no guarantees as to the order of the map; in particular, it does not guarantee that the order will remain constant over time.</p></blockquote><p>HashMap实现了Map接口，允许键/值为<code class="language-plaintext highlighter-rouge">null</code>，非线程安全的，也不能保证顺序。</p><p>HashMap基于数组实现，并使用拉链法解决哈希碰撞的问题。在开始之前，先介绍一下HashMap中的<code class="language-plaintext highlighter-rouge">capacity</code>和<code class="language-plaintext highlighter-rouge">loadFactor</code>。</p><ul><li><p><code class="language-plaintext highlighter-rouge">capacity</code>表示容量，即hashmap中<code class="language-plaintext highlighter-rouge">table</code>数组的长度，该值一直为$2^n$(<code class="language-plaintext highlighter-rouge">1&lt;&lt;n</code>)，默认为16。</p><li><p><code class="language-plaintext highlighter-rouge">loadFactor</code>表示负载因子，默认为0.75，当hashmap中元素超过<code class="language-plaintext highlighter-rouge">capacity*loadFactor</code>这个阈值，就会进行扩容<code class="language-plaintext highlighter-rouge">resize</code>。</p></ul><p>HashMap的散列函数采用除留余数法，使用key的hash值被table数组的长度除后所得的余数为散列地址。即\(f(k) = key.hash\mod capacity\)</p><p>下面看一下在Java8中HashMap的代码实现（主要介绍<code class="language-plaintext highlighter-rouge">put</code>, <code class="language-plaintext highlighter-rouge">get</code>, <code class="language-plaintext highlighter-rouge">resize</code>的实现）。</p><h3 id="2-put"><span class="mr-2">2. put</span><a href="#2-put" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>put函数的逻辑大概如下：</p><ol><li>令<code class="language-plaintext highlighter-rouge">n = table.length</code>, <code class="language-plaintext highlighter-rouge">hash = hash(key)</code><li>计算结点散列地址<code class="language-plaintext highlighter-rouge">index = hash % n</code><li>检测是否与<code class="language-plaintext highlighter-rouge">table[index]</code>发生碰撞，有碰撞跳转<code class="language-plaintext highlighter-rouge">5</code><li>直接将结点放入<code class="language-plaintext highlighter-rouge">table[index]</code>，跳转<code class="language-plaintext highlighter-rouge">7</code><li>检查<code class="language-plaintext highlighter-rouge">table[index]</code>处的链表是否已经树化，是就将结点插入树中，如果key值存在，直接覆盖旧值，跳转<code class="language-plaintext highlighter-rouge">8</code>，如果不存在，跳转<code class="language-plaintext highlighter-rouge">7</code><li>遍历链表，如果key值存在，直接覆盖旧值，跳转<code class="language-plaintext highlighter-rouge">8</code>。如果不存在，将结点插入链表尾部，并检查链表长度是否超过树化的阈值（默认8），超过就将链表转化为红黑树，提高查找效率<li>检查元素数量是否超过<code class="language-plaintext highlighter-rouge">capacity*loadFactor</code>，是就进行扩容并且<code class="language-plaintext highlighter-rouge">rehash</code><li>结束</ol><p>现在来看一下put的代码：</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+</pre><td class="rouge-code"><pre>
+<span class="kd">final</span> <span class="no">V</span> <span class="nf">putVal</span><span class="o">(</span><span class="kt">int</span> <span class="n">hash</span><span class="o">,</span> <span class="no">K</span> <span class="n">key</span><span class="o">,</span> <span class="no">V</span> <span class="n">value</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">onlyIfAbsent</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">evict</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;[]</span> <span class="n">tab</span><span class="o">;</span>
+    <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">p</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="n">i</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">tab</span> <span class="o">=</span> <span class="n">table</span><span class="o">)</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="o">(</span><span class="n">n</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span>
+      <span class="c1">// 初始化table</span>
+      <span class="n">n</span> <span class="o">=</span> <span class="o">(</span><span class="n">tab</span> <span class="o">=</span> <span class="n">resize</span><span class="o">()).</span><span class="na">length</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">p</span> <span class="o">=</span> <span class="n">tab</span><span class="o">[</span><span class="n">i</span> <span class="o">=</span> <span class="o">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&amp;</span> <span class="n">hash</span><span class="o">])</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+      <span class="c1">// 无碰撞</span>
+      <span class="n">tab</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">newNode</span><span class="o">(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+    <span class="k">else</span> <span class="o">{</span>
+      <span class="c1">// 碰撞</span>
+      <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">e</span><span class="o">;</span>
+      <span class="no">K</span> <span class="n">k</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">hash</span> <span class="o">==</span> <span class="n">hash</span> <span class="o">&amp;&amp;</span> <span class="o">((</span><span class="n">k</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="na">key</span><span class="o">)</span> <span class="o">==</span> <span class="n">key</span> <span class="o">||</span> <span class="o">(</span><span class="n">key</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">key</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">k</span><span class="o">))))</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">p</span><span class="o">;</span>
+      <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">p</span> <span class="k">instanceof</span> <span class="nc">TreeNode</span><span class="o">)</span>
+        <span class="c1">// 已经树化，使用putTreeVal插入结点</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="o">((</span><span class="nc">TreeNode</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;)</span> <span class="n">p</span><span class="o">).</span><span class="na">putTreeVal</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">tab</span><span class="o">,</span> <span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
+      <span class="k">else</span> <span class="o">{</span>
+        <span class="c1">// 遍历链表</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">binCount</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="o">;</span> <span class="o">++</span><span class="n">binCount</span><span class="o">)</span> <span class="o">{</span>
+          <span class="k">if</span> <span class="o">((</span><span class="n">e</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="na">next</span><span class="o">)</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// 将结点插入链表尾部</span>
+            <span class="n">p</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">newNode</span><span class="o">(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">binCount</span> <span class="o">&gt;=</span> <span class="no">TREEIFY_THRESHOLD</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span> <span class="c1">// -1 for 1st</span>
+              <span class="c1">// 将链表转化为红黑树，提高效率</span>
+              <span class="n">treeifyBin</span><span class="o">(</span><span class="n">tab</span><span class="o">,</span> <span class="n">hash</span><span class="o">);</span>
+            <span class="k">break</span><span class="o">;</span>
+          <span class="o">}</span>
+          <span class="k">if</span> <span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">hash</span> <span class="o">==</span> <span class="n">hash</span> <span class="o">&amp;&amp;</span> <span class="o">((</span><span class="n">k</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">key</span><span class="o">)</span> <span class="o">==</span> <span class="n">key</span> <span class="o">||</span> <span class="o">(</span><span class="n">key</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">key</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">k</span><span class="o">))))</span>
+            <span class="k">break</span><span class="o">;</span>
+          <span class="n">p</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">e</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// existing mapping for key</span>
+        <span class="c1">// key值已经存在</span>
+        <span class="no">V</span> <span class="n">oldValue</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">onlyIfAbsent</span> <span class="o">||</span> <span class="n">oldValue</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+          <span class="c1">// 覆盖旧值</span>
+          <span class="n">e</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
+        <span class="n">afterNodeAccess</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">oldValue</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="c1">// 修改计数，在使用迭代器的过程中有其他线程修改了map，那么将抛出ConcurrentModificationException</span>
+    <span class="o">++</span><span class="n">modCount</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(++</span><span class="n">size</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="o">)</span>
+      <span class="c1">// 扩容</span>
+      <span class="n">resize</span><span class="o">();</span>
+    <span class="n">afterNodeInsertion</span><span class="o">(</span><span class="n">evict</span><span class="o">);</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="o">}</span>  
+    
+</pre></table></code></div></div><h3 id="3-resize"><span class="mr-2">3. resize</span><a href="#3-resize" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>resize做了两件事情：</p><ul><li>将table容量扩大到两倍大小<li>rehash计算元素在新table中的散列地址，存入新table</ul><p>扩容很简单，直接创建一个原table大小2倍的新table即可。</p><p>对于rehash计算的新散列地址，只有两种情况：</p><ul><li>新地址不变<li>新地址 = 旧地址 + 扩容前表容量大小</ul><p>以上结论很容易推导： 假设原表容量为n，\(n=2^k\)， 扩容后新表容量为\(m = 2n =2^{k + 1}\)，key的hash值为h</p><p>rehash前：</p><ul><li>令\(a = \lfloor{\frac h n}\rfloor = \lfloor{\frac h {2^k}}\rfloor\)<li>散列地址为\(f_1(h) = h\mod n = h - an\)</ul><p>rehash后：</p><ul><li>散列地址为\(f_2(h) = h\mod m = h\mod 2n = h -\lfloor \frac a 2 \rfloor m\)</ul><p>如果a为偶数，\(f_2(h) = h - \lfloor \frac a 2 \rfloor m = h - \frac a 2 2n = h - an = f_1(h)\)</p><p>如果a为奇数，\(f_2(h) = h - \lfloor \frac a 2 \rfloor m = h - \frac {a - 1} 2 2n = h - an + n = f_1(h) + n\)</p><p>了解以上结论，再看resize的代码就很容易了。</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+</pre><td class="rouge-code"><pre><span class="c1">// 创建新表，容量为旧表的两倍</span>
+<span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;[]</span> <span class="n">newTab</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;[])</span> <span class="k">new</span> <span class="nc">Node</span><span class="o">[</span><span class="n">newCap</span><span class="o">];</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">newTab</span><span class="o">;</span>
+<span class="k">if</span> <span class="o">(</span><span class="n">oldTab</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+  <span class="c1">//rehash</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">oldCap</span><span class="o">;</span> <span class="o">++</span><span class="n">j</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">e</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">e</span> <span class="o">=</span> <span class="n">oldTab</span><span class="o">[</span><span class="n">j</span><span class="o">])</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">oldTab</span><span class="o">[</span><span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">next</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+        <span class="c1">// 该散列地址只有一个结点，没有碰撞，直接将结点rehash后存入新表</span>
+        <span class="n">newTab</span><span class="o">[</span><span class="n">e</span><span class="o">.</span><span class="na">hash</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">newCap</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)]</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+      <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">e</span> <span class="k">instanceof</span> <span class="nc">TreeNode</span><span class="o">)</span>
+        <span class="c1">// 对于已经树化的，通过split将结点重新rehash，有兴趣的可以自己研究一下</span>
+        <span class="o">((</span><span class="nc">TreeNode</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;)</span> <span class="n">e</span><span class="o">).</span><span class="na">split</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">newTab</span><span class="o">,</span> <span class="n">j</span><span class="o">,</span> <span class="n">oldCap</span><span class="o">);</span>
+      <span class="k">else</span> <span class="o">{</span> <span class="c1">// preserve order</span>
+        <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">loHead</span> <span class="o">=</span> <span class="kc">null</span><span class="o">,</span> <span class="n">loTail</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">hiHead</span> <span class="o">=</span> <span class="kc">null</span><span class="o">,</span> <span class="n">hiTail</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>
+        <span class="k">do</span> <span class="o">{</span>
+          <span class="n">next</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+          <span class="k">if</span> <span class="o">((</span><span class="n">e</span><span class="o">.</span><span class="na">hash</span> <span class="o">&amp;</span> <span class="n">oldCap</span><span class="o">)</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// rehash后散列地址不变的结点组成新链表loHead</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">loTail</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+              <span class="n">loHead</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+            <span class="k">else</span>
+              <span class="n">loTail</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+            <span class="n">loTail</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+          <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="c1">// rehash后散列地址改变的结点组成新链表hiHead</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">hiTail</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+              <span class="n">hiHead</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+            <span class="k">else</span>
+              <span class="n">hiTail</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+            <span class="n">hiTail</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+          <span class="o">}</span>
+        <span class="o">}</span> <span class="k">while</span> <span class="o">((</span><span class="n">e</span> <span class="o">=</span> <span class="n">next</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">loTail</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// 将loHead链表放入新表原地址中</span>
+          <span class="n">loTail</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+          <span class="n">newTab</span><span class="o">[</span><span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">loHead</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">hiTail</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// 将hiHead链表放入新表原地址 + oldCap位置中</span>
+          <span class="n">hiTail</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+          <span class="n">newTab</span><span class="o">[</span><span class="n">j</span> <span class="o">+</span> <span class="n">oldCap</span><span class="o">]</span> <span class="o">=</span> <span class="n">hiHead</span><span class="o">;</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><h3 id="4-get"><span class="mr-2">4. get</span><a href="#4-get" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>了解了put和resize，get就很容易理解了，直接看代码:</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+</pre><td class="rouge-code"><pre><span class="kd">final</span> <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="nf">getNode</span><span class="o">(</span><span class="kt">int</span> <span class="n">hash</span><span class="o">,</span> <span class="nc">Object</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;[]</span> <span class="n">tab</span><span class="o">;</span>
+    <span class="nc">Node</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="n">first</span><span class="o">,</span> <span class="n">e</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">n</span><span class="o">;</span>
+    <span class="no">K</span> <span class="n">k</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">tab</span> <span class="o">=</span> <span class="n">table</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">n</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">first</span> <span class="o">=</span> <span class="n">tab</span><span class="o">[(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&amp;</span> <span class="n">hash</span><span class="o">])</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 检查第一个结点，如果key相等，直接返回value</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">first</span><span class="o">.</span><span class="na">hash</span> <span class="o">==</span> <span class="n">hash</span> <span class="o">&amp;&amp;</span> <span class="c1">// always check first node</span>
+          <span class="o">((</span><span class="n">k</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">key</span><span class="o">)</span> <span class="o">==</span> <span class="n">key</span> <span class="o">||</span> <span class="o">(</span><span class="n">key</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">key</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">k</span><span class="o">))))</span>
+        <span class="k">return</span> <span class="n">first</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">((</span><span class="n">e</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">next</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">first</span> <span class="k">instanceof</span> <span class="nc">TreeNode</span><span class="o">)</span>
+          <span class="c1">// 已经树化的，在树中查找</span>
+          <span class="k">return</span> <span class="o">((</span><span class="nc">TreeNode</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;)</span> <span class="n">first</span><span class="o">).</span><span class="na">getTreeNode</span><span class="o">(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">);</span>
+        <span class="k">do</span> <span class="o">{</span>
+          <span class="c1">// 遍历链表查找，查找key值命中的value</span>
+          <span class="k">if</span> <span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">hash</span> <span class="o">==</span> <span class="n">hash</span> <span class="o">&amp;&amp;</span> <span class="o">((</span><span class="n">k</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">key</span><span class="o">)</span> <span class="o">==</span> <span class="n">key</span> <span class="o">||</span> <span class="o">(</span><span class="n">key</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">key</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">k</span><span class="o">))))</span>
+            <span class="k">return</span> <span class="n">e</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">while</span> <span class="o">((</span><span class="n">e</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">next</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">);</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="o">}</span>
+</pre></table></code></div></div><h3 id="5-结论"><span class="mr-2">5. 结论</span><a href="#5-结论" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>HashMap是java开发中最常用的数据结构，也是java面试中常见的问题，了解其源码不管从哪方面看都是有好处的。另外，在平时的使用中，需要注意HashMap并不是线程安全的，在并发环境中使用会出现很多问题，比如resize可以造成死循环等。在并发环境中一定要使用<code class="language-plaintext highlighter-rouge">ConcurrentHashMap</code>。</p><h3 id="参考"><span class="mr-2">参考</span><a href="#参考" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p><a href="http://coolshell.cn/articles/9606.html">疫苗：Java HashMap的死循环</a></p><p><a href="http://yikun.github.io/2015/04/01/Java-HashMap%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/">Java HashMap工作原理及实现</a></p><p><a href="http://www.importnew.com/16599.html">Java HashMap工作原理</a></p></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/categories/programing-language/'>Programing Language</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/tags/java/" class="post-tag no-text-decoration" >Java</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=JDK%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E4%B9%8BHashMap%20-%20wanchunw&url=https%3A%2F%2Fwanchunw.com%2Fposts%2Fjdk-hashmap%2F" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=JDK%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E4%B9%8BHashMap%20-%20wanchunw&u=https%3A%2F%2Fwanchunw.com%2Fposts%2Fjdk-hashmap%2F" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://t.me/share/url?url=https%3A%2F%2Fwanchunw.com%2Fposts%2Fjdk-hashmap%2F&text=JDK%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E4%B9%8BHashMap%20-%20wanchunw" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" data-title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted"><div class="access"><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/java/">Java</a> <a class="post-tag" href="/tags/protobuf/">Protobuf</a></div></div></div><div id="toc-wrapper" class="pl-0 pr-4 mb-5"><div class="panel-heading pl-3 pt-2 mb-2">Contents</div><nav id="toc"></nav></div><script src="https://cdn.jsdelivr.net/npm/tocbot@4.20.1/dist/tocbot.min.js"></script></div></div><div class="row"><div id="tail-wrapper" class="col-12 col-lg-11 col-xl-9 pl-3 pr-3 pr-xl-4 mt-5"><div id="related-posts" class="mb-2 mb-sm-4"><h3 class="pt-2 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/posts/jdk-concurrenthashmap/"><div class="card-body"> <em class="small" data-ts="1479035860" data-df="ll" > Nov 13, 2016 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>JDK源码学习之ConcurrentHashMap</h3><div class="text-muted small"><p> 概述 上一篇介绍了HashMap的代码实现。众所周知，HashMap不是线程安全的，那么怎样让HashMap变得线程安全呢，最简单的方法就是给HashMap的方法加上synchronized，使其变为同步的，HashTable就是这么干的。这样虽然能解决并发的问题，但是由于锁粒度太大，多线程时竞争激烈，效率很低，因此并不推荐使用。在并发环境下，有更好的选择ConcurrentHashMap...</p></div></div></a></div><div class="card"> <a href="/posts/java8-lambda/"><div class="card-body"> <em class="small" data-ts="1480200290" data-df="ll" > Nov 27, 2016 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Java8之lambda表达式</h3><div class="text-muted small"><p> Lambda表达式是Java8最重要也最令人期待的特性，它使得Java初步具有了函数式编程的能力。虽然Lambda表达式的本质只是基于接口的语法糖，但是依然可以给开发带来便利，尤其是Stream的引入，使对集合的操作变的更加方便和强大。 lambda 表达式 lambda表达式格式: (param1, param2, ...) -&amp;gt; expression, 如果不能用一个表达式...</p></div></div></a></div><div class="card"> <a href="/posts/jdk-linkedhashmap/"><div class="card-body"> <em class="small" data-ts="1483799429" data-df="ll" > Jan 7, 2017 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>JDK源码学习之LinkedHashMap</h3><div class="text-muted small"><p> LinkedHashMap继承了HashMap，其行为和HashMap类似，只是在内部多维护了一个元素结点的双向链表。官方文档描述如下： Hash table and linked list implementation of the Map interface, with predictable iteration order. This implementation differ...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"><div class="btn btn-outline-primary disabled" prompt="Older"><p>-</p></div><a href="/posts/jdk-concurrenthashmap/" class="btn btn-outline-primary" prompt="Newer"><p>JDK源码学习之ConcurrentHashMap</p></a></div><script src="https://utteranc.es/client.js" repo="wengwch/wengwch.github.io" issue-term="url" crossorigin="anonymous" async> </script> <script type="text/javascript"> $(function() { const origin = "https://utteranc.es"; const iframe = "iframe.utterances-frame"; const lightTheme = "github-light"; const darkTheme = "github-dark"; let initTheme = lightTheme; if ($("html[data-mode=dark]").length > 0 || ($("html[data-mode]").length == 0 && window.matchMedia("(prefers-color-scheme: dark)").matches)) { initTheme = darkTheme; } addEventListener("message", (event) => { let theme; /* credit to <https://github.com/utterance/utterances/issues/170#issuecomment-594036347> */ if (event.origin === origin) { /* page initial */ theme = initTheme; } else if (event.source === window && event.data && event.data.direction === ModeToggle.ID) { /* global theme mode changed */ const mode = event.data.message; theme = (mode === ModeToggle.DARK_MODE ? darkTheme : lightTheme); } else { return; } const message = { type: "set-theme", theme: theme }; const utterances = document.querySelector(iframe).contentWindow; utterances.postMessage(message, origin); }); }); </script></div></div></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/java/">Java</a> <a class="post-tag" href="/tags/protobuf/">Protobuf</a></div></div></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><footer><div class="container pl-lg-4 pr-lg-4"><div class="d-flex justify-content-between align-items-center text-muted ml-md-3 mr-md-3"><div class="footer-left"><p class="mb-0"> © 2025 <a href="https://twitter.com/wengwch">wanchun</a>. <span data-toggle="tooltip" data-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author.">Some rights reserved.</span></p></div><div class="footer-right"><p class="mb-0">Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></div></footer><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a><div id="notification" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-animation="true" data-autohide="false"><div class="toast-header"> <button type="button" class="ml-2 ml-auto close" data-dismiss="toast" aria-label="Close"> <span aria-hidden="true">&times;</span> </button></div><div class="toast-body text-center pt-0"><p class="pl-2 pr-2 mb-3">A new version of content is available.</p><button type="button" class="btn btn-primary" aria-label="Update"> Update </button></div></div><script src="https://cdn.jsdelivr.net/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">Oops! No results found.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="https://cdn.jsdelivr.net/combine/npm/magnific-popup@1/dist/jquery.magnific-popup.min.js,npm/lazysizes@5.3.2/lazysizes.min.js,npm/clipboard@2/dist/clipboard.min.js"></script> <script src="https://cdn.jsdelivr.net/combine/npm/dayjs@1/dayjs.min.js,npm/dayjs@1/locale/en.min.js,npm/dayjs@1/plugin/relativeTime.min.js,npm/dayjs@1/plugin/localizedFormat.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script> /* see: <https://docs.mathjax.org/en/latest/options/input/tex.html#tex-options> */ MathJax = { tex: { /* start/end delimiter pairs for in-line math */ inlineMath: [ ['$', '$'], ['\\(', '\\)'] ], /* start/end delimiter pairs for display math */ displayMath: [ ['$$', '$$'], ['\\[', '\\]'] ] } }; </script> <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/js/bootstrap.bundle.min.js"></script> <script defer src="/app.js"></script> <script defer src="https://www.googletagmanager.com/gtag/js?id=UA-68433097-1"></script> <script> document.addEventListener("DOMContentLoaded", function(event) { window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'UA-68433097-1'); }); </script>
